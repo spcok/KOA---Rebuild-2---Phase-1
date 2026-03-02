@@ -1,0 +1,7 @@
+{
+  "name": "Remix: koa-system- rebuild 2 - phase 2",
+  "description": "A comprehensive management and compliance system designed to ensure zoos meet the requirements of the Zoo Licensing Act 1981, including conservation, education, and animal welfare standards.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
