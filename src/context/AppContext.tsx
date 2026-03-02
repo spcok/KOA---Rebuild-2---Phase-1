@@ -24,24 +24,29 @@ export const useAppDataValues = () => {
   const { user: authUser, profile: authProfile } = useAuthStore();
 
   // Reactive data feeds from Dexie
-  const animals = useLiveQuery(() => db.animals.toArray(), []) || [];
-  const log_entries = useLiveQuery(() => db.log_entries.toArray(), []) || [];
-  const tasks = useLiveQuery(() => db.tasks.toArray(), []) || [];
-  const users = useLiveQuery(() => db.users.toArray(), []) || [];
-  const site_log_entries = useLiveQuery(() => db.site_log_entries.toArray(), []) || [];
-  const incidents = useLiveQuery(() => db.incidents.toArray(), []) || [];
-  const first_aid_log_entries = useLiveQuery(() => db.first_aid_log_entries.toArray(), []) || [];
-  const daily_round_entries = useLiveQuery(() => db.daily_round_entries.toArray(), []) || [];
-  const bcs_data = useLiveQuery(() => db.bcs_data.toArray(), []) || [];
-  const animal_movements = useLiveQuery(() => db.animal_movements.toArray(), []) || [];
-  const staff_training = useLiveQuery(() => db.staff_training.toArray(), []) || [];
+  const animals = useLiveQuery(async () => { try { return await db.animals.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const log_entries = useLiveQuery(async () => { try { return await db.log_entries.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const tasks = useLiveQuery(async () => { try { return await db.tasks.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const users = useLiveQuery(async () => { try { return await db.users.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const site_log_entries = useLiveQuery(async () => { try { return await db.site_log_entries.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const incidents = useLiveQuery(async () => { try { return await db.incidents.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const first_aid_log_entries = useLiveQuery(async () => { try { return await db.first_aid_log_entries.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const daily_round_entries = useLiveQuery(async () => { try { return await db.daily_round_entries.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const bcs_data = useLiveQuery(async () => { try { return await db.bcs_data.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const animal_movements = useLiveQuery(async () => { try { return await db.animal_movements.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const staff_training = useLiveQuery(async () => { try { return await db.staff_training.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
   const orgProfile = useLiveQuery(async () => {
-    const profiles = await db.organisation_profiles.toArray();
-    return profiles[0];
+    try {
+      const profiles = await db.organisation_profiles.toArray();
+      return profiles[0];
+    } catch (e) {
+      console.error(e);
+      return undefined;
+    }
   }, []) || undefined;
-  const contacts = useLiveQuery(() => db.contacts.toArray(), []) || [];
-  const holidayRequests = useLiveQuery(() => db.holiday_requests.toArray(), []) || [];
-  const documents = useLiveQuery(() => db.documents.toArray(), []) || [];
+  const contacts = useLiveQuery(async () => { try { return await db.contacts.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const holidayRequests = useLiveQuery(async () => { try { return await db.holiday_requests.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const documents = useLiveQuery(async () => { try { return await db.documents.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
 
   // Find the current user's profile from the users table
   const currentUser = React.useMemo(() => {

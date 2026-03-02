@@ -6,7 +6,7 @@ import { GlobalDocument } from '@/types';
 import { FileText, Upload, Download, Trash2, X } from 'lucide-react';
 
 const SettingsDocuments: React.FC = () => {
-  const documents = useLiveQuery(() => db.documents.toArray(), []) || [];
+  const documents = useLiveQuery(async () => { try { return await db.documents.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
   const [docForm, setDocForm] = useState<Partial<GlobalDocument>>({ category: 'Licensing' });
 

@@ -22,10 +22,10 @@ interface TestResult {
 const SettingsSystemHealth: React.FC = () => {
   const { profile: currentUser } = useAuthStore();
   
-  const animals = useLiveQuery(() => db.animals.toArray(), []) || [];
-  const log_entries = useLiveQuery(() => db.log_entries.toArray(), []) || [];
-  const tasks = useLiveQuery(() => db.tasks.toArray(), []) || [];
-  const users = useLiveQuery(() => db.users.toArray(), []) || [];
+  const animals = useLiveQuery(async () => { try { return await db.animals.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const log_entries = useLiveQuery(async () => { try { return await db.log_entries.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const tasks = useLiveQuery(async () => { try { return await db.tasks.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
+  const users = useLiveQuery(async () => { try { return await db.users.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
 
   const [isProcessingBackup, setIsProcessingBackup] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<{ count: number, type: 'animal' | 'log' } | null>(null);

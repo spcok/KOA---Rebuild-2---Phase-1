@@ -73,6 +73,17 @@ const Dashboard: React.FC<DashboardProps> = ({
       try { return new Date(log.log_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch { return ''; }
   };
 
+  const getSafeDate = (dateStr?: string | Date | null) => {
+      if (!dateStr) return 'N/A';
+      try {
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return 'N/A';
+          return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      } catch (e) {
+          return 'N/A';
+      }
+  };
+
   if (isLoading) {
       return (
           <div className="p-8 flex flex-col items-center justify-center h-full min-h-[50vh] space-y-4">
@@ -140,7 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                               <AlertCircle size={16} className="text-amber-500 mt-0.5 shrink-0"/>
                               <div>
                                   <p className="text-sm font-bold text-slate-800 leading-tight">{t.title}</p>
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">DUE: {t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB', {day:'numeric', month:'short'}) : 'N/A'}</p>
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">DUE: {getSafeDate(t.due_date)}</p>
                               </div>
                           </div>
                       ))
@@ -168,7 +179,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                               <Heart size={16} className="text-rose-500 mt-0.5 shrink-0"/>
                               <div>
                                   <p className="text-sm font-bold text-slate-800 leading-tight">{t.title}</p>
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">MANDATORY: {t.due_date ? new Date(t.due_date).toLocaleDateString('en-GB', {day:'numeric', month:'short'}) : 'N/A'}</p>
+                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">MANDATORY: {getSafeDate(t.due_date)}</p>
                               </div>
                           </div>
                       ))
@@ -276,7 +287,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Intake</span>
                               {d?.todayFeed ? (
                                   <>
-                                      <span className="text-xs font-bold text-slate-800 uppercase truncate">{d.todayFeed.value}</span>
+                                      <span className="text-xs font-bold text-slate-800 uppercase truncate">{typeof d.todayFeed.value === 'string' ? d.todayFeed.value : String(d.todayFeed.value || 'Fed')}</span>
                                       <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">{getTimeDisplay(d.todayFeed)}</span>
                                   </>
                               ) : <span className="text-xs font-bold text-slate-300 uppercase">NIL</span>}

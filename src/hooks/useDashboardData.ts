@@ -32,13 +32,24 @@ export const useDashboardData = (activeTab: AnimalCategory, viewDate: string) =>
 
   const toggleOrderLock = (val: boolean) => setIsOrderLocked(val);
 
-  const rawAnimals = useLiveQuery(() => 
-    db.animals.where('category').equals(activeTab).filter(a => !a.archived).toArray()
-  , [activeTab]);
+  const rawAnimals = useLiveQuery(async () => {
+    try {
+      if (!activeTab) return [];
+      return await db.animals.where('category').equals(activeTab).filter(a => !a.archived).toArray();
+    } catch (e) {
+      console.error("Dexie error in rawAnimals:", e);
+      return [];
+    }
+  }, [activeTab]);
 
-  const rawTasks = useLiveQuery(() => 
-    db.tasks.where('completed').equals(false).toArray()
-  , []);
+  const rawTasks = useLiveQuery(async () => {
+    try {
+      return await db.tasks.where('completed').equals(false).toArray();
+    } catch (e) {
+      console.error("Dexie error in rawTasks:", e);
+      return [];
+    }
+  }, []);
 
   const isLoading = rawAnimals === undefined || rawTasks === undefined;
 
@@ -57,55 +68,63 @@ export const useDashboardData = (activeTab: AnimalCategory, viewDate: string) =>
   };
 
   const animalStats = useLiveQuery(async () => {
-      if (!rawAnimals) return undefined;
-      const safeAnimals = rawAnimals;
-      const total = safeAnimals.length;
-      let weighed = 0;
-      let fed = 0;
-      
-      const animalData = new Map<string, AnimalData>();
-
-      const start = new Date(viewDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(viewDate);
-      end.setHours(23, 59, 59, 999);
-
-      const todayLogs = await db.log_entries.where('log_date').between(start, end).toArray();
-
-      for (const animal of safeAnimals) {
-          const animalTodayLogs = (todayLogs || []).filter(l => l.animal_id === animal.id);
-          const todayWeight = animalTodayLogs.find(l => l.log_type === LogType.WEIGHT);
-          const todayFeed = animalTodayLogs.find(l => l.log_type === LogType.FEED);
+      try {
+          if (!rawAnimals) return undefined;
+          const safeAnimals = rawAnimals;
+          const total = safeAnimals.length;
+          let weighed = 0;
+          let fed = 0;
           
-          if (todayWeight) weighed++;
-          if (todayFeed) fed++;
+          const animalData = new Map<string, AnimalData>();
 
-          const previousWeights = await db.log_entries
-            .where('animal_id').equals(animal.id)
-            .filter(l => l.log_type === LogType.WEIGHT && l.log_date < start)
-            .sortBy('log_date');
-            
-          const previousWeight = (previousWeights || []).length > 0 ? previousWeights[previousWeights.length - 1] : undefined;
-          const latestWeight = todayWeight || previousWeight;
+          const start = new Date(viewDate);
+          if (isNaN(start.getTime())) {
+              return { total, weighed, fed, animalData };
+          }
+          start.setHours(0, 0, 0, 0);
+          const end = new Date(viewDate);
+          end.setHours(23, 59, 59, 999);
 
-          // Sanitize log values
-          const sanitizeLog = (log?: LogEntry) => {
-            if (!log) return undefined;
-            return {
-              ...log,
-              value: typeof log.value === 'string' ? log.value : String(log.value || '')
-            };
-          };
+          const todayLogs = await db.log_entries.where('log_date').between(start, end).toArray();
 
-          animalData.set(animal.id, { 
-              todayWeight: sanitizeLog(todayWeight), 
-              latestWeight: sanitizeLog(latestWeight), 
-              todayFeed: sanitizeLog(todayFeed), 
-              previousWeight: sanitizeLog(previousWeight)
-          });
+          for (const animal of safeAnimals) {
+              const animalTodayLogs = (todayLogs || []).filter(l => l.animal_id === animal.id);
+              const todayWeight = animalTodayLogs.find(l => l.log_type === LogType.WEIGHT);
+              const todayFeed = animalTodayLogs.find(l => l.log_type === LogType.FEED);
+              
+              if (todayWeight) weighed++;
+              if (todayFeed) fed++;
+
+              const previousWeights = await db.log_entries
+                .where('animal_id').equals(animal.id)
+                .filter(l => l.log_type === LogType.WEIGHT && l.log_date < start)
+                .sortBy('log_date');
+                
+              const previousWeight = (previousWeights || []).length > 0 ? previousWeights[previousWeights.length - 1] : undefined;
+              const latestWeight = todayWeight || previousWeight;
+
+              // Sanitize log values
+              const sanitizeLog = (log?: LogEntry) => {
+                if (!log) return undefined;
+                return {
+                  ...log,
+                  value: typeof log.value === 'string' ? log.value : String(log.value || '')
+                };
+              };
+
+              animalData.set(animal.id, { 
+                  todayWeight: sanitizeLog(todayWeight), 
+                  latestWeight: sanitizeLog(latestWeight), 
+                  todayFeed: sanitizeLog(todayFeed), 
+                  previousWeight: sanitizeLog(previousWeight)
+              });
+          }
+
+          return { total, weighed, fed, animalData };
+      } catch (err) {
+          console.error("Dexie query error in animalStats:", err);
+          return { total: rawAnimals?.length || 0, weighed: 0, fed: 0, animalData: new Map<string, AnimalData>() };
       }
-
-      return { total, weighed, fed, animalData };
   }, [rawAnimals, viewDate]) || { total: animals.length, weighed: 0, fed: 0, animalData: new Map<string, AnimalData>() };
 
   const taskStats = useMemo(() => {

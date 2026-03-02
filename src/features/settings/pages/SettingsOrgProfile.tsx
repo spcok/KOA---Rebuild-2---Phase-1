@@ -39,7 +39,7 @@ const resizeImage = (file: File): Promise<string> => {
 };
 
 const SettingsOrgProfile: React.FC = () => {
-  const orgProfiles = useLiveQuery(() => db.organisation_profiles.toArray(), []) || [];
+  const orgProfiles = useLiveQuery(async () => { try { return await db.organisation_profiles.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
   const orgProfile = orgProfiles[0];
 
   const [orgForm, setOrgForm] = useState<OrganisationProfile>({

@@ -95,7 +95,7 @@ const SignaturePad = ({ value, onChange }: { value: string, onChange: (v: string
 };
 
 const SettingsAccessControl: React.FC = () => {
-  const users = useLiveQuery(() => db.users.toArray(), []) || [];
+  const users = useLiveQuery(async () => { try { return await db.users.toArray(); } catch (e) { console.error(e); return []; } }, []) || [];
   
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
