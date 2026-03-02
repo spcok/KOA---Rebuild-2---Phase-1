@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Task, Animal, LogType, User, SiteLogEntry } from '@/types';
-import { CheckCircle2, Circle, Plus, Calendar, User as UserIcon, AlertCircle, ListTodo, X, Check, ClipboardList, UserCheck } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Calendar, User as UserIcon, AlertCircle, ListTodo, X, Check, ClipboardList, UserCheck, Loader2 } from 'lucide-react';
 import AddEntryModal from './AddEntryModal';
 import { useAppData } from '../src/context/AppContext';
 import { useAuthStore } from '@/src/store/authStore';
@@ -25,7 +25,15 @@ const Tasks: React.FC = () => {
   const [newDueDate, setNewDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [newAssignedTo, setNewAssignedTo] = useState(currentUser?.id || '');
 
-  const filteredTasks = tasks.filter((t: Task) => {
+  if (!tasks || !animals) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  const filteredTasks = (tasks || []).filter((t: Task) => {
       if (filter === 'assigned') return !t.completed && (t.assignedTo === currentUser?.id);
       if (filter === 'pending') return !t.completed;
       if (filter === 'completed') return t.completed;

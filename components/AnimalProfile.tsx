@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Animal, LogType, UserRole, LogEntry } from '@/types';
-import { ChevronLeft, Scale, Utensils, Printer, Edit, Trash2, AlertTriangle, Plus, Filter, Activity, Archive, Skull, Truck } from 'lucide-react';
+import { ChevronLeft, Scale, Utensils, Printer, Edit, Trash2, AlertTriangle, Plus, Filter, Activity, Archive, Skull, Truck, Loader2 } from 'lucide-react';
 import { formatWeightDisplay } from '@/src/services/weightUtils';
 import AddEntryModal from './AddEntryModal';
 import SignGenerator from './SignGenerator';
@@ -24,18 +24,43 @@ const AnimalProfile: React.FC<AnimalProfileProps> = ({ animal, onBack }) => {
   const { isAdmin, isStaff } = usePermissions();
   
   // Use Dexie's indices for efficient querying
-  const animalLogs = useLiveQuery(() => 
-    db.log_entries.where('animal_id').equals(animal.id).reverse().sortBy('log_date')
-  , [animal.id]) || [];
+  const animalLogs = useLiveQuery(async () => {
+    try {
+      return await db.log_entries.where('animal_id').equals(animal.id).reverse().sortBy('log_date');
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }, [animal.id]);
 
   const orgProfile = useLiveQuery(async () => {
-    const profiles = await db.organisation_profiles.toArray();
-    return profiles[0];
-  }, []) || undefined;
+    try {
+      const profiles = await db.organisation_profiles.toArray();
+      return profiles[0];
+    } catch (e) {
+      console.error(e);
+      return undefined;
+    }
+  }, []);
 
-  const animals = useLiveQuery(() => db.animals.toArray(), []) || [];
+  const animals = useLiveQuery(async () => {
+    try {
+      return await db.animals.toArray();
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }, []);
   
   const [activeTab, setActiveTab] = useState<'Overview' | 'Husbandry Logs' | 'Medical Records' | 'Species Info'>('Overview');
+
+  if (!animalLogs || !animals) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-slate-50/50">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
   const [logFilter, setLogFilter] = useState<LogType | 'ALL'>('ALL');
   
   const [isSignGeneratorOpen, setIsSignGeneratorOpen] = useState(false);

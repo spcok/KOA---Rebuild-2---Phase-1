@@ -14,6 +14,14 @@ const Reports: React.FC = () => {
   const { profile: currentUser } = useAuthStore();
 
   const [selectedSchemaId, setSelectedSchemaId] = useState<string>('DAILY_LOG');
+
+  if (!animals || !log_entries) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   

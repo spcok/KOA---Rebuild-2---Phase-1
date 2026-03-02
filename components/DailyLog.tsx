@@ -1,7 +1,7 @@
 
 import React, { useState, useOptimistic } from 'react';
 import { Animal, AnimalCategory, LogType, LogEntry, UserRole } from '@/types';
-import { ClipboardList, Check, Droplets, ChevronLeft, ChevronRight, Plus, Thermometer, Scale, Utensils, ArrowRight } from 'lucide-react';
+import { ClipboardList, Check, Droplets, ChevronLeft, ChevronRight, Plus, Thermometer, Scale, Utensils, ArrowRight, Loader2 } from 'lucide-react';
 import { formatWeightDisplay } from '@/src/services/weightUtils';
 import AddEntryModal from './AddEntryModal';
 
@@ -25,6 +25,14 @@ const DailyLog: React.FC<DailyLogProps> = ({ activeCategory, setActiveCategory, 
   const [selectedAnimalId, setSelectedAnimalId] = useState<string | null>(null);
   const [logType, setLogType] = useState<LogType>(LogType.WEIGHT);
   const [editingLog, setEditingLog] = useState<LogEntry | undefined>(undefined);
+
+  if (!animals || !log_entries) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
 
   const animalsWithLogs = (animals || []).map((animal: Animal) => ({
     ...animal,
@@ -54,7 +62,12 @@ const DailyLog: React.FC<DailyLogProps> = ({ activeCategory, setActiveCategory, 
     });
 
   const getTodayLog = (animal: any, type: LogType): LogEntry | undefined => {
-    return (animal.logs || []).find((log: LogEntry) => log.log_date.toISOString().startsWith(viewDate) && log.log_type === type);
+    return (animal.logs || []).find((log: LogEntry) => {
+        if (!log.log_date) return false;
+        const d = new Date(log.log_date);
+        if (isNaN(d.getTime())) return false;
+        return d.toISOString().startsWith(viewDate) && log.log_type === type;
+    });
   };
 
   const handleCellClick = (animalId: string, type: LogType, existingLog?: LogEntry) => {
@@ -160,7 +173,7 @@ const DailyLog: React.FC<DailyLogProps> = ({ activeCategory, setActiveCategory, 
                                         </button>
                                     </td>
                                     {!isExotic && <td className={`${cellPadding} border-b border-slate-100`}><button type="button" onClick={() => handleCellClick(animal.id, LogType.TEMPERATURE, logs.temp)} className={`w-full flex items-center justify-between min-h-[2.5rem] px-2 -mx-2 rounded-xl border-2 hover:border-emerald-200 hover:bg-emerald-50/50 text-left ${!logs.temp ? 'border-dashed border-slate-200' : 'border-transparent'}`}><div className="min-w-0">{logs.temp ? <span><Thermometer size={14}/> {logs.temp.temperature_c}°C</span> : <span className="text-slate-300 font-bold uppercase text-[10px]">Temp</span>}</div><div className="opacity-0 group-hover:opacity-100 shrink-0 ml-1">{logs.temp ? <Check size={14} /> : <Plus size={14} />}</div></button></td>}
-                                    <td className={`${cellPadding} border-b border-slate-100`}><button type="button" onClick={() => handleCellClick(animal.id, LogType.FEED, logs.feed)} className={`w-full flex items-center justify-between min-h-[2.5rem] px-2 -mx-2 rounded-xl border-2 hover:border-emerald-200 hover:bg-emerald-50/50 text-left ${!logs.feed ? 'border-dashed border-slate-200' : 'border-transparent'}`}><div className="min-w-0">{logs.feed ? <span className="font-black text-emerald-700 uppercase truncate block"><Utensils size={10} className="inline mr-1"/>{logs.feed.value}</span> : <span className="text-slate-300 font-bold uppercase text-[10px]">Intake</span>}</div><div className="opacity-0 group-hover:opacity-100 shrink-0 ml-1">{logs.feed ? <Check size={14} /> : <Plus size={14} />}</div></button></td>
+                                    <td className={`${cellPadding} border-b border-slate-100`}><button type="button" onClick={() => handleCellClick(animal.id, LogType.FEED, logs.feed)} className={`w-full flex items-center justify-between min-h-[2.5rem] px-2 -mx-2 rounded-xl border-2 hover:border-emerald-200 hover:bg-emerald-50/50 text-left ${!logs.feed ? 'border-dashed border-slate-200' : 'border-transparent'}`}><div className="min-w-0">{logs.feed ? <span className="font-black text-emerald-700 uppercase truncate block"><Utensils size={10} className="inline mr-1"/>{typeof logs.feed.value === 'string' ? logs.feed.value : String(logs.feed.value || 'Fed')}</span> : <span className="text-slate-300 font-bold uppercase text-[10px]">Intake</span>}</div><div className="opacity-0 group-hover:opacity-100 shrink-0 ml-1">{logs.feed ? <Check size={14} /> : <Plus size={14} />}</div></button></td>
                                     {isExotic && <td className={`${cellPadding} text-center border-b border-slate-100`}><div className="flex justify-center gap-4"><button type="button" onClick={() => handleQuickCheck(animal, LogType.MISTING)}><Droplets className={logs.mist ? 'text-emerald-500' : 'text-slate-200 hover:text-emerald-300'} /></button><button type="button" onClick={() => handleQuickCheck(animal, LogType.WATER)}><Check className={logs.water ? 'text-blue-500' : 'text-slate-200 hover:text-blue-300'} /></button></div></td>}
                                 </tr>
                             );

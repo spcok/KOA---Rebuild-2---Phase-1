@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Animal, LogType, LogEntry, User } from '@/types';
-import { ArrowLeftRight, Edit2, Trash2, Plus, X, ArrowRight, User as UserIcon } from 'lucide-react';
+import { ArrowLeftRight, Edit2, Trash2, Plus, X, ArrowRight, User as UserIcon, Loader2 } from 'lucide-react';
 import { useAppData } from '../src/context/AppContext';
 import { useAuthStore } from '@/src/store/authStore';
 
@@ -20,10 +20,18 @@ const Movements: React.FC = () => {
   const [formDest, setFormDest] = useState('');
   const [formNotes, setFormNotes] = useState('');
 
+  if (!animals || !log_entries) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
   const movementLogs = useMemo(() => {
       const allLogs = (log_entries || [])
             .filter(l => l.log_type === LogType.MOVEMENT)
-            .map(log => ({ log, animal: animals.find(a => a.id === log.animal_id) }))
+            .map(log => ({ log, animal: (animals || []).find(a => a.id === log.animal_id) }))
             .filter(item => item.animal);
       const filtered = filterType === 'ALL' ? allLogs : allLogs.filter(l => l.log.movement_type === filterType);
       
