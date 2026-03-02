@@ -28,7 +28,7 @@ export async function syncTable<T extends SyncableEntity>(
     const { data, error } = await query;
 
     if (error) {
-      if (error.code === '42501') {
+      if (error.code === '42501' || error.code === 'PGRST301') {
         console.warn(`[Sync Warning] RLS Access Denied for ${tableName}. Skipping sync.`);
         return;
       }
@@ -67,7 +67,14 @@ export async function createRecord<T extends SyncableEntity>(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42501' || error.code === 'PGRST301') {
+        console.error(`[Create Error] Permission Denied for ${tableName}. Record saved locally only.`);
+        await dexieTable.put(recordToInsert);
+        return recordToInsert;
+      }
+      throw error;
+    }
 
     const savedRecord = data as T;
     await dexieTable.put(savedRecord);
@@ -100,7 +107,16 @@ export async function updateRecord<T extends SyncableEntity>(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42501' || error.code === 'PGRST301') {
+        console.error(`[Update Error] Permission Denied for ${tableName}. Update applied locally only.`);
+        const localRecord = await dexieTable.get(id);
+        const updatedLocal = { ...localRecord, ...recordToUpdate } as T;
+        await dexieTable.put(updatedLocal);
+        return updatedLocal;
+      }
+      throw error;
+    }
 
     const updatedRecord = data as T;
     await dexieTable.put(updatedRecord);
@@ -125,7 +141,14 @@ export async function deleteRecord<T extends SyncableEntity>(
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42501' || error.code === 'PGRST301') {
+        console.error(`[Delete Error] Permission Denied for ${tableName}. Delete applied locally only.`);
+        await dexieTable.delete(id);
+        return;
+      }
+      throw error;
+    }
 
     await dexieTable.delete(id);
   } catch (err) {

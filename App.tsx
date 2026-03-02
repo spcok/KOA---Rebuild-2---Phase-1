@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import LoginScreen from './components/LoginScreen';
 import { Loader2 } from 'lucide-react';
@@ -35,6 +35,7 @@ import DailyRounds from './components/DailyRounds';
 import FlightRecords from './components/FlightRecords';
 import ZooCompliance from './components/ZooCompliance';
 import HelpCenter from './components/HelpCenter';
+import AnimalProfile from './components/AnimalProfile';
 
 // Initialize the store outside the React tree to avoid lifecycle race conditions
 useAuthStore.getState().initialize();
@@ -63,6 +64,7 @@ const GlobalSpinner = () => (
 function AppContent() {
   const { user, profile, isLoading, isInitialized, signOut } = useAuthStore();
   const [fontScale, setFontScale] = useState(100);
+  const navigate = useNavigate();
 
   // State for Dashboard and DailyLog
   const [activeTab, setActiveTab] = useState('Owls');
@@ -83,50 +85,59 @@ function AppContent() {
 
   return (
     <AppProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout fontScale={fontScale} setFontScale={setFontScale} />}>
-            <Route index element={<Dashboard onSelectAnimal={() => {}} activeTab={activeTab} setActiveTab={setActiveTab} viewDate={viewDate} setViewDate={setViewDate} />} />
-            <Route path="daily-log" element={<DailyLog activeCategory={activeTab} setActiveCategory={setActiveTab} viewDate={viewDate} setViewDate={setViewDate} />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="medical" element={<Health />} />
-            <Route path="movements" element={<Movements />} />
-            <Route path="flight-records" element={<FlightRecords />} />
-            <Route path="daily-rounds" element={<DailyRounds />} />
-            <Route path="maintenance" element={<SiteMaintenance />} />
-            <Route path="incidents" element={<Incidents />} />
-            <Route path="first-aid" element={<FirstAid />} />
-            <Route path="safety-drills" element={<SafetyDrills />} />
-            <Route path="timesheets" element={<TimeSheets />} />
-            <Route path="holidays" element={<HolidayRegistry />} />
-            <Route path="compliance" element={<ZooCompliance />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="missing-records" element={<MissingRecords />} />
-            <Route path="settings" element={<SettingsLayout />}>
-              <Route index element={<Navigate to="org" replace />} />
-              <Route path="org" element={<SettingsOrgProfile />} />
-              <Route path="users" element={<SettingsAccessControl />} />
-              <Route path="training" element={<SettingsStaffTraining />} />
-              <Route path="directory" element={<SettingsDirectory />} />
-              <Route path="lists" element={<SettingsOperationalLists />} />
-              <Route path="documents" element={<SettingsDocuments />} />
-              <Route path="diagnostics" element={<SettingsDiagnostics />} />
-              <Route path="intelligence" element={<SettingsIntelligence />} />
-              <Route path="system" element={<SettingsSystemHealth />} />
-              {/* Fallback for other tabs not yet extracted */}
-              <Route path="*" element={<div className="p-8 text-slate-400 font-black uppercase tracking-widest">Module Extraction in Progress...</div>} />
-            </Route>
-            <Route path="help" element={<HelpCenter />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+      <Routes>
+        <Route path="/" element={<Layout fontScale={fontScale} setFontScale={setFontScale} />}>
+          <Route index element={<Dashboard onSelectAnimal={(animal: any) => navigate(`/animal/${animal.id}`)} activeTab={activeTab} setActiveTab={setActiveTab} viewDate={viewDate} setViewDate={setViewDate} />} />
+          <Route path="animal/:id" element={<AnimalProfileWrapper onBack={() => navigate(-1)} />} />
+          <Route path="daily-log" element={<DailyLog activeCategory={activeTab as any} setActiveCategory={setActiveTab as any} viewDate={viewDate} setViewDate={setViewDate} />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="medical" element={<Health />} />
+          <Route path="movements" element={<Movements />} />
+          <Route path="flight-records" element={<FlightRecords />} />
+          <Route path="daily-rounds" element={<DailyRounds />} />
+          <Route path="maintenance" element={<SiteMaintenance />} />
+          <Route path="incidents" element={<Incidents />} />
+          <Route path="first-aid" element={<FirstAid />} />
+          <Route path="safety-drills" element={<SafetyDrills />} />
+          <Route path="timesheets" element={<TimeSheets />} />
+          <Route path="holidays" element={<HolidayRegistry />} />
+          <Route path="compliance" element={<ZooCompliance />} />
+          <Route path="reports" element={<Reports />} />
+          <Route path="missing-records" element={<MissingRecords />} />
+          <Route path="settings" element={<SettingsLayout />}>
+            <Route index element={<Navigate to="org" replace />} />
+            <Route path="org" element={<SettingsOrgProfile />} />
+            <Route path="users" element={<SettingsAccessControl />} />
+            <Route path="training" element={<SettingsStaffTraining />} />
+            <Route path="directory" element={<SettingsDirectory />} />
+            <Route path="lists" element={<SettingsOperationalLists />} />
+            <Route path="documents" element={<SettingsDocuments />} />
+            <Route path="diagnostics" element={<SettingsDiagnostics />} />
+            <Route path="intelligence" element={<SettingsIntelligence />} />
+            <Route path="system" element={<SettingsSystemHealth />} />
+            {/* Fallback for other tabs not yet extracted */}
+            <Route path="*" element={<div className="p-8 text-slate-400 font-black uppercase tracking-widest">Module Extraction in Progress...</div>} />
           </Route>
-        </Routes>
-      </BrowserRouter>
+          <Route path="help" element={<HelpCenter />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
     </AppProvider>
   );
 }
 
 function App() {
-  return <AppContent />;
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  );
 }
+
+const AnimalProfileWrapper = ({ onBack }: { onBack: () => void }) => {
+  const { id } = useParams<{ id: string }>();
+  if (!id) return null;
+  return <AnimalProfile animalId={id} onBack={onBack} />;
+};
 
 export default App;

@@ -91,22 +91,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
                 console.log("[AUTH STORE] Realtime update received:", newProfile);
 
-                // Check for role/permission downgrade
-                const isDowngraded = oldProfile && (
-                  (oldProfile.role === 'Admin' && newProfile.role !== 'Admin') ||
-                  (!newProfile.active)
-                );
+                // Granular check for role/permission change or deactivation
+                const isDeactivated = !newProfile.active;
+                const roleChanged = oldProfile?.role !== newProfile.role;
+                const permissionsChanged = JSON.stringify(oldProfile?.permissions) !== JSON.stringify(newProfile.permissions);
 
-                if (isDowngraded) {
-                  console.warn("[AUTH STORE] Permission downgrade detected. Wiping cache and logging out.");
-                  await db.delete(); // Wipe Dexie
-                  await get().signOut();
-                  window.location.reload();
-                  return;
-                }
+                if (isDeactivated || roleChanged || permissionsChanged) {
+                  console.warn("[AUTH STORE] Security context changed. Wiping cache and re-authenticating.");
+                  
+                  // If deactivated, force logout
+                  if (isDeactivated) {
+                    await db.delete(); // Wipe Dexie
+                    await get().signOut();
+                    window.location.reload();
+                    return;
+                  }
 
-                // Refresh session to get new JWT claims if role changed
-                if (oldProfile?.role !== newProfile.role) {
+                  // If permissions changed, refresh session to get new JWT claims
                   await supabase.auth.refreshSession();
                 }
 

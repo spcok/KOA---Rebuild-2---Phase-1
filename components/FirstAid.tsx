@@ -1,15 +1,12 @@
 
-import React, { useState, useMemo } from 'react';
-import { FirstAidLogEntry, User } from '@/types';
-import { Stethoscope, Plus, MapPin, Clock, X, Trash2, Calendar, User as UserIcon } from 'lucide-react';
-import { useAppData } from '../src/context/AppContext';
-import { useAuthStore } from '@/src/store/authStore';
+import React, { useState } from 'react';
+import { FirstAidLogEntry } from '@/types';
+import { Stethoscope, Plus, MapPin, Clock, X, Trash2, Loader2, Search, Filter } from 'lucide-react';
+import { useFirstAidData } from '@/src/hooks/useFirstAidData';
 
 const FirstAid: React.FC = () => {
-  const { firstAidLogs, addFirstAid, deleteFirstAid } = useAppData();
-  const { profile: currentUser } = useAuthStore();
+  const { logs, isLoading, searchTerm, setSearchTerm, addFirstAid, deleteFirstAid } = useFirstAidData();
   
-  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -21,27 +18,26 @@ const FirstAid: React.FC = () => {
   const [treatment, setTreatment] = useState('');
   const [outcome, setOutcome] = useState<FirstAidLogEntry['outcome']>('Returned to Work');
 
-  const filteredLogs = useMemo(() => {
-    return firstAidLogs.filter((log: FirstAidLogEntry) => 
-        log.personName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.location.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a: FirstAidLogEntry, b: FirstAidLogEntry) => {
-        const dateComp = b.date.localeCompare(a.date);
-        if (dateComp !== 0) return dateComp;
-        return b.timestamp - a.timestamp;
-    });
-  }, [firstAidLogs, searchTerm]);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      addFirstAid({
-          id: `fa_${Date.now()}`,
+      await addFirstAid({
           date, time, personName, type, description, treatment,
-          treatedBy: currentUser?.name || 'SYS',
-          location, outcome, timestamp: Date.now()
+          location, outcome
       });
       setIsModalOpen(false);
+      // Reset form
+      setPersonName('');
+      setDescription('');
+      setTreatment('');
+      setLocation('');
   };
 
   const inputClass = "w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold focus:outline-none focus:border-emerald-500 transition-all placeholder-slate-400";
@@ -55,9 +51,21 @@ const FirstAid: React.FC = () => {
                 </h1>
                 <p className="text-slate-500 text-sm font-medium">Official first aid and safety event registry for personnel.</p>
             </div>
-            <button onClick={() => setIsModalOpen(true)} className="bg-slate-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 hover:bg-black transition-all active:scale-95 font-black uppercase text-xs tracking-widest">
-                <Plus size={18}/> Record Occurrence
-            </button>
+            <div className="flex items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input 
+                        type="text" 
+                        placeholder="Search records..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 transition-all"
+                    />
+                </div>
+                <button onClick={() => setIsModalOpen(true)} className="bg-slate-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 hover:bg-black transition-all active:scale-95 font-black uppercase text-xs tracking-widest shrink-0">
+                    <Plus size={18}/> Record Occurrence
+                </button>
+            </div>
         </div>
 
         <div className="bg-white rounded-2xl border-2 border-slate-300 shadow-sm overflow-hidden">
@@ -73,7 +81,7 @@ const FirstAid: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {filteredLogs.map(log => (
+                        {logs.map(log => (
                             <tr key={log.id} className="bg-white hover:bg-slate-50 transition-all group border-l-4 border-l-transparent hover:border-l-rose-500 hover:shadow-md relative z-0 hover:z-10 cursor-default">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="font-bold text-slate-800 text-sm">{new Date(log.date).toLocaleDateString('en-GB')}</div>
@@ -104,7 +112,7 @@ const FirstAid: React.FC = () => {
                                 </td>
                             </tr>
                         ))}
-                        {filteredLogs.length === 0 && (
+                        {logs.length === 0 && (
                             <tr><td colSpan={5} className="px-6 py-24 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Nil Staff Health Registry History</td></tr>
                         )}
                     </tbody>
@@ -113,7 +121,7 @@ const FirstAid: React.FC = () => {
         </div>
 
         {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/0 flex items-center justify-center z-[100] p-4">
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
                 <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-0 animate-in zoom-in-95 border-2 border-slate-300 overflow-hidden">
                     <div className="p-6 border-b-2 border-slate-100 flex justify-between items-center bg-slate-50/50 shadow-sm">
                         <div><h2 className="text-xl font-bold text-slate-900 uppercase tracking-tight leading-none">Record Occurrence</h2><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Health & Safety Registry</p></div>
@@ -158,3 +166,4 @@ const FirstAid: React.FC = () => {
 };
 
 export default FirstAid;
+

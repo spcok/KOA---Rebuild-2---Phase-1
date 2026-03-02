@@ -44,7 +44,9 @@ export const useDashboardData = (activeTab: AnimalCategory, viewDate: string) =>
 
   const rawTasks = useLiveQuery(async () => {
     try {
-      return await db.tasks.where('completed').equals(false).toArray();
+      // Use filter instead of where for boolean field to avoid IDBKeyRange issues in some environments
+      // and ensure the query doesn't fail if the index is picky about boolean keys.
+      return await db.tasks.filter(t => t.completed === false).toArray();
     } catch (e) {
       console.error("Dexie error in rawTasks:", e);
       return [];
@@ -78,16 +80,18 @@ export const useDashboardData = (activeTab: AnimalCategory, viewDate: string) =>
           const animalData = new Map<string, AnimalData>();
 
           const start = new Date(viewDate);
-          if (isNaN(start.getTime())) {
+          const end = new Date(viewDate);
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
               return { total, weighed, fed, animalData };
           }
           start.setHours(0, 0, 0, 0);
-          const end = new Date(viewDate);
           end.setHours(23, 59, 59, 999);
 
           const todayLogs = await db.log_entries.where('log_date').between(start, end).toArray();
 
           for (const animal of safeAnimals) {
+              if (!animal.id) continue; // Safety valve for missing ID
+
               const animalTodayLogs = (todayLogs || []).filter(l => l.animal_id === animal.id);
               const todayWeight = animalTodayLogs.find(l => l.log_type === LogType.WEIGHT);
               const todayFeed = animalTodayLogs.find(l => l.log_type === LogType.FEED);

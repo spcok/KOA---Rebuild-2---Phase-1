@@ -1,17 +1,22 @@
 
-import React, { useState, useMemo } from 'react';
-import { Incident, IncidentType, IncidentSeverity, Animal, User } from '@/types';
-import { ShieldAlert, Plus, Calendar, Clock, X, AlertTriangle, MapPin, Trash2 } from 'lucide-react';
-import { useAppData } from '../src/context/AppContext';
-import { useAuthStore } from '@/src/store/authStore';
+import React, { useState } from 'react';
+import { IncidentType, IncidentSeverity } from '@/types';
+import { ShieldAlert, Plus, Clock, X, AlertTriangle, MapPin, Trash2, Loader2, Search, Filter } from 'lucide-react';
+import { useIncidentData } from '@/src/hooks/useIncidentData';
 
 const Incidents: React.FC = () => {
-  const { incidents, animals, addIncident, updateIncident, deleteIncident } = useAppData();
-  const { profile: currentUser } = useAuthStore();
+  const { 
+    incidents, 
+    isLoading, 
+    searchTerm, 
+    setSearchTerm, 
+    filterSeverity, 
+    setFilterSeverity, 
+    addIncident, 
+    deleteIncident 
+  } = useIncidentData();
   
-  const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterSeverity, setFilterSeverity] = useState<IncidentSeverity | 'ALL'>('ALL');
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [type, setType] = useState<IncidentType>(IncidentType.OTHER);
@@ -19,24 +24,17 @@ const Incidents: React.FC = () => {
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
 
-  const filteredIncidents = useMemo(() => {
-    return incidents
-      .filter((inc: Incident) => {
-        const matchesSearch = inc.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             inc.location.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesSeverity = filterSeverity === 'ALL' || inc.severity === filterSeverity;
-        return matchesSearch && matchesSeverity;
-      })
-      .sort((a: Incident, b: Incident) => {
-          const dateComp = new Date(b.date).getTime() - new Date(a.date).getTime();
-          if (dateComp !== 0) return dateComp;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-  }, [incidents, searchTerm, filterSeverity]);
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      addIncident({
+      await addIncident({
           date: new Date(date), 
           time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }), 
           type: type, 
@@ -44,7 +42,7 @@ const Incidents: React.FC = () => {
           description,
           location: location || 'Site Wide', 
           status: 'Open', 
-          reported_by: currentUser?.id || 'SYS', 
+          reported_by: 'SYS', // Will be overridden by hook if needed, but hook handles it
       });
       setIsModalOpen(false);
       setDescription('');
@@ -62,9 +60,32 @@ const Incidents: React.FC = () => {
                 </h1>
                 <p className="text-slate-500 text-sm font-medium">Compliance records for health, safety, and security events.</p>
             </div>
-            <button onClick={() => setIsModalOpen(true)} className="bg-slate-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 hover:bg-black transition-all active:scale-95 font-black uppercase text-xs tracking-widest">
-                <Plus size={18}/> New Occurrence
-            </button>
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div className="relative flex-1 md:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <input 
+                        type="text" 
+                        placeholder="Search incidents..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-emerald-500 transition-all"
+                    />
+                </div>
+                <div className="flex items-center bg-white p-1 rounded-xl border-2 border-slate-200 shadow-sm">
+                    {(['ALL', ...Object.values(IncidentSeverity)] as const).map((s) => (
+                        <button
+                            key={s}
+                            onClick={() => setFilterSeverity(s)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${filterSeverity === s ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        >
+                            {s}
+                        </button>
+                    ))}
+                </div>
+                <button onClick={() => setIsModalOpen(true)} className="bg-slate-900 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 hover:bg-black transition-all active:scale-95 font-black uppercase text-xs tracking-widest shrink-0">
+                    <Plus size={18}/> New Occurrence
+                </button>
+            </div>
         </div>
 
         <div className="bg-white rounded-2xl border-2 border-slate-300 shadow-sm overflow-hidden">
@@ -80,7 +101,7 @@ const Incidents: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {filteredIncidents.map((incident: Incident) => {
+                        {incidents.map((incident) => {
                             const isCritical = incident.severity === IncidentSeverity.CRITICAL || incident.severity === IncidentSeverity.HIGH;
                             return (
                                 <tr key={incident.id} className="bg-white hover:bg-slate-50 transition-all group border-l-4 border-l-transparent hover:border-l-emerald-500 hover:shadow-md relative z-0 hover:z-10 cursor-default">
@@ -111,7 +132,7 @@ const Incidents: React.FC = () => {
                                 </tr>
                             );
                         })}
-                        {filteredIncidents.length === 0 && (
+                        {incidents.length === 0 && (
                              <tr><td colSpan={5} className="px-6 py-24 text-center text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Nil Incident History</td></tr>
                         )}
                     </tbody>
@@ -120,7 +141,7 @@ const Incidents: React.FC = () => {
         </div>
 
         {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/0 flex items-center justify-center z-[100] p-4">
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
                 <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-0 animate-in zoom-in-95 border-2 border-slate-300 overflow-hidden">
                     <div className="p-6 border-b-2 border-slate-100 flex justify-between items-center bg-slate-50/50 shadow-sm">
                         <div><h2 className="text-xl font-bold text-slate-900 uppercase tracking-tight leading-none">New Occurrence</h2><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Compliance Registry</p></div>
@@ -158,3 +179,4 @@ const Incidents: React.FC = () => {
 };
 
 export default Incidents;
+
